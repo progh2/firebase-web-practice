@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+
+<title>파이어베이스 실습2</title>
+
+<script src="https://www.gstatic.com/firebasejs/4.3.1/firebase.js"></script>
+<script>
+// Initialize Firebase
+var config = {
+	apiKey: "AIzaSyDfaUTu666agJze0e-eaNtJUWvp9qagIRo",
+	authDomain: "wpg1-687dc.firebaseapp.com",
+	databaseURL: "https://wpg1-687dc.firebaseio.com",
+	projectId: "wpg1-687dc",
+	storageBucket: "wpg1-687dc.appspot.com",
+	messagingSenderId: "1071024860612"
+};
+firebase.initializeApp(config);
+
+//파이어베이스 디비 객체 얻기 
+database = firebase.database();
+
+//프로필 가져오기
+var profileNameRef = database.ref("profile");
+profileNameRef.on('value', function(snapshot){
+	var profile = snapshot.val();
+	document.getElementById('name').innerHTML = profile.name;
+	document.getElementById('img').setAttribute('src',profile.img);
+	var github_link = '<a href="' + profile.github + '" target="_blank">' 
+		+ profile.github + '</a>';
+	document.getElementById('github').innerHTML = github_link;
+});
+
+//글쓴이 사진 미리보기 업데이트
+function updateWriterImg(){
+	var src = document.getElementById('w_img').value;
+	document.getElementById('w_img_preview').setAttribute('src', src);
+}
+
+//글 추가하기
+function addComment(){
+	var w_name = document.getElementById('w_name').value;
+	var w_img = document.getElementById('w_img').value;
+	var w_content = document.getElementById('w_content').value;
+
+	var commentListRef = database.ref("commentList");
+	timestamp = Math.floor(new Date().getTime() / 1000) * -1;
+	var newCommentRef = commentListRef.child(timestamp).set({
+		"w_name" : w_name,
+		"w_img" : w_img,
+		"w_content" : w_content
+	});
+}
+
+
+// 글 삭제 기능
+function removeComment(key){
+	var commentRef = database.ref("commentList/" + key);
+	commentRef.remove();
+}
+
+// 다음 글 가져오기
+var limit_num = 3;
+function nextComment(){
+	limit_num += 2;
+	getList(limit_num);
+}
+
+// 글 목록 가져오기
+var commentListRef;
+function getList(limit_num){
+	// 기존 목록을 가져온 적이 있을 때는 연결 해제
+	if(commentListRef != null){
+		commentListRef.off();
+	}
+
+	commentListRef = database.ref("commentList").limitToFirst(limit_num);
+	commentListRef.on('value', function(snapshot){
+		document.getElementById('commentList').innerHTML=null;
+		snapshot.forEach(function(commentSnapshot){
+			var comment_key = commentSnapshot.key;
+			var comment = commentSnapshot.val();
+			//alert(comment.w_name + '/' + comment.w_content);
+			var post ='<div class="card"><img src="'
+				+comment.w_img
+				+'"class="preview"><b>'
+				+comment.w_name
+				+'</b> (이/가) 말하길... [<a href="#" onClick="removeComment(\''
+				+comment_key
+				+'\')">X</a>]<div>'
+				+comment.w_content
+				+'</div></div>';
+			document.getElementById('commentList').innerHTML += post;
+		});
+	});
+
+}
+getList(3);
+
+</script>
+  </head>
+  <body>
+	<style>
+		.card{
+			border:1px solid #ccc;margin:10px;padding:10px;
+			height:150px;
+		}
+		img.preview{
+			background-color:#eee;width:130px;height:130px;float:left;margin-right:10px;
+		}
+	</style>
+	<!-- 프로필 정보 -->
+	<div class="card">
+		<b>My Profile</b> <br>
+		<img id="img" src="" width="100px"><br>
+		<span id="name"> </span> <span id="github"> </span><br>		
+	</div>
+
+	<!-- 글쓰기 폼 -->
+	<div class="card">
+		<b>방명록 글쓰기</b> <br>
+		<form>
+			<img id="w_img_preview"  class="preview"> 
+			글쓴이 : <input type="text" id="w_name" style="width:100px;">
+			사진URL : <input type="text" id="w_img" onChange="updateWriterImg()" style="width:400px;"><br>
+			코멘트 : <textarea id="w_content"  style="width:585px;height:60px;"></textarea><br>
+			<input type="button" id="send_comment" value="보내기" onClick="addComment()" 
+			style="width:598px;height:40px;margin-left:60px;">
+		</form>
+	</div>
+
+	<!-- 방명록 목록 -->
+	<div id="commentList"> </div>
+
+	<!-- 다음 글 가져오기 버튼 -->
+	<div style="border:1px solid #999;">
+		<input type="button" value="다음 글 2개 더 가져오기" onClick="nextComment()" style="width:100%;height:40px;">
+	</div>
+
+  </body>
+</html>
